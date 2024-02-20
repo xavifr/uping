@@ -1,4 +1,4 @@
-package UPing
+package uping
 
 import (
 	"fmt"
@@ -40,7 +40,7 @@ func (s *UPingerSlaveStatus) AppendUp(rtt time.Duration) (changed bool) {
 }
 
 func (s *UPingerSlaveStatus) AppendDown() (changed bool) {
-	if s.State == Up || len(s.Seq) == 0 {
+	if s.State || len(s.Seq) == 0 {
 		s.State = Down
 		s.Seq = append([]int{0}, s.Seq...)
 		changed = true
@@ -73,7 +73,7 @@ func (s *UPingerSlaveStatus) GetSequence() string {
 			message = fmt.Sprintf("%s / ", message)
 		}
 
-		if state == Up {
+		if state {
 			message = fmt.Sprintf("%s%c[%dm%d%c[39m", message, rune(033), colorBase+2, seq, rune(033))
 		} else {
 			message = fmt.Sprintf("%s%c[%dm%d%c[39m", message, rune(033), colorBase+1, seq, rune(033))
@@ -87,7 +87,7 @@ func (s *UPingerSlaveStatus) GetSequence() string {
 
 func (s *UPingerSlaveStatus) ToString() string {
 	message := ""
-	if s.State == Up {
+	if s.State {
 		message = fmt.Sprintf("%c[1;32m UP %c[22;39m [ %s ] (%.1fms %.1f%%)", rune(033), rune(033), s.GetSequence(), float64(s.LastRtt.Microseconds())/float64(1000), s.GetPercent())
 	} else {
 		message = fmt.Sprintf("%c[1;31mDOWN%c[22;39m [ %s ] (%.1f%%)", rune(033), rune(033), s.GetSequence(), s.GetPercent())

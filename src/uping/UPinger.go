@@ -1,4 +1,4 @@
-package UPing
+package uping
 
 import (
 	"errors"
@@ -63,7 +63,7 @@ func (p *UPinger) Start() error {
 	for p.running {
 		seedTime = seedTime.Add(time.Second * time.Duration(p.conf.Interval))
 
-		timer := time.NewTimer(seedTime.Sub(time.Now()))
+		timer := time.NewTimer(time.Until(seedTime))
 		<-timer.C
 
 		childrenAreRunning := false
@@ -114,13 +114,13 @@ func (p *UPinger) Start() error {
 			fmt.Printf("%c", rune(007))
 		}
 
-		fmt.Printf("%c[1G[%s] %c[1muPing%c[22m ✯ Int:%ds, TTL:%d, Sz:%db\n", rune(033), time.Now().Format(time.DateTime), rune(033), rune(033), p.conf.Interval, p.conf.Ttl, p.conf.Size)
+		fmt.Printf("%c[1G[%s] %c[1muPing%c[22m ✯ Int:%ds, TTL:%d, Sz:%db\n", rune(033), time.Now().Format(time.DateTime), rune(033), rune(033), p.conf.Interval, p.conf.TTL, p.conf.Size)
 
 		for _, s := range p.slaves {
 			fmt.Printf("  %c[1m%s%c[22m%s %s\n", rune(033), s.target.Host, rune(033), strings.Repeat(" ", maxTargetHostLen-len(s.target.Host)), s.Status.ToString())
 
-			if len(p.slaves) == 1 && s.Status.State == Up && s.Status.Seq[0] == 1 {
-				if p.conf.ExecSsh {
+			if len(p.slaves) == 1 && s.Status.State && s.Status.Seq[0] == 1 {
+				if p.conf.ExecSSH {
 					s.execSSH()
 					seedTime = time.Now()
 				}
@@ -156,7 +156,7 @@ func (p *UPinger) Stop() {
 
 func NewUPinger(conf Conf) (*UPinger, error) {
 	confErrors := conf.Validate()
-	if confErrors != nil && len(confErrors) > 0 {
+	if confErrors != nil {
 		return nil, errors.New(strings.Join(confErrors, "\n"))
 
 	}

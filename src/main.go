@@ -6,7 +6,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"uping/UPing"
+	"uping/uping"
 )
 
 var versionString = "3.0"
@@ -28,7 +28,7 @@ Usage:
     -c: Exit after sending <count> packets (default without limit)
     -C: Exit after <count> successfull packets in a row (default disabled)
 
-    -s: Execute ssh command on target on success (only one target)
+    -s: Execute SSH command on target on success (only one target)
 
     -v: Show version and exit
     -w: Clear screen at defined intervals
@@ -64,7 +64,7 @@ func main() {
 	count := flag.Int("c", -1, "")
 	countSuccess := flag.Int("C", -1, "")
 
-	execSsh := flag.Bool("s", false, "")
+	execSSH := flag.Bool("s", false, "")
 
 	interval := flag.Int("i", 1, "")
 	source := flag.String("I", "", "")
@@ -92,7 +92,7 @@ func main() {
 		return
 	}
 
-	conf := UPing.NewUPingConf()
+	conf := uping.NewUPingConf()
 
 	conf.AudibleSingle = *audibleSingle
 	conf.ZudibleSingle = *zudibleSingle
@@ -100,12 +100,12 @@ func main() {
 	conf.ZudibleAll = *zudibleAll
 
 	conf.Size = *size
-	conf.Ttl = *ttl
+	conf.TTL = *ttl
 
 	conf.Count = *count
 	conf.CountSuccess = *countSuccess
 
-	conf.ExecSsh = *execSsh
+	conf.ExecSSH = *execSSH
 
 	conf.Watch = *watch
 
@@ -125,13 +125,13 @@ func main() {
 		conf.Interval = *interval
 	}
 
-	if conf.ExecSsh && flag.NArg() > 1 {
+	if conf.ExecSSH && flag.NArg() > 1 {
 		flag.Usage()
 		fmt.Println("Error: Execution flag is only compatible with 1-target mode")
 		return
 	}
 
-	uping, err := UPing.NewUPinger(conf)
+	pinger, err := uping.NewUPinger(conf)
 	if err != nil {
 		flag.Usage()
 		fmt.Println("Errors:")
@@ -140,7 +140,7 @@ func main() {
 	}
 
 	for _, arg := range flag.Args() {
-		err := uping.AddTarget(arg)
+		err := pinger.AddTarget(arg)
 		if err != nil {
 			flag.Usage()
 			fmt.Printf("Error: Invalid target %s\n", arg)
@@ -153,10 +153,10 @@ func main() {
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		for range c {
-			uping.Stop()
+			pinger.Stop()
 		}
 	}()
 
-	uping.Start()
+	pinger.Start()
 
 }

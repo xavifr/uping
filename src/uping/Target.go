@@ -1,4 +1,4 @@
-package UPing
+package uping
 
 import (
 	"errors"
@@ -18,14 +18,14 @@ type Target struct {
 func ParseTarget(target string) (*Target, error) {
 	hostTarget := &Target{User: "", Host: "", Address: "", Port: 0}
 
-	targetRegexp, _ := regexp.Compile("(?:(\\S+)@)?([^:]+)(?::(\\d+))?")
+	targetRegexp, _ := regexp.Compile(`(?:(\S+)@)?([^:]+)(?::(\d+))?`)
 	if !targetRegexp.MatchString(target) {
-		return nil, errors.New(fmt.Sprintf("target %s is not valid (match)", target))
+		return nil, fmt.Errorf("target %s is not valid (match)", target)
 	}
 
 	matches := targetRegexp.FindStringSubmatch(target)
 	if len(matches) != 4 {
-		return nil, errors.New(fmt.Sprintf("target %s is not valid (find)", target))
+		return nil, fmt.Errorf("target %s is not valid (find)", target)
 	}
 
 	hostTarget.Host = matches[2]
@@ -42,7 +42,7 @@ func ParseTarget(target string) (*Target, error) {
 	hostTarget.Address = addrs[0]
 
 	if len(matches[1]) > 0 {
-		userRegexp, _ := regexp.Compile("^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\\$)$")
+		userRegexp, _ := regexp.Compile(`^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\$)$`)
 		if !userRegexp.MatchString(matches[1]) {
 			return nil, errors.New("target username not valid")
 		}

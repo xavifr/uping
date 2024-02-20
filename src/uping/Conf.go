@@ -1,4 +1,4 @@
-package UPing
+package uping
 
 import (
 	"net"
@@ -12,12 +12,12 @@ type Conf struct {
 
 	Count, CountSuccess int
 
-	ExecSsh bool
+	ExecSSH bool
 
 	Interval int
 
 	Source string
-	Ttl    int
+	TTL    int
 
 	Watch bool
 }
@@ -55,5 +55,5 @@ func (c *Conf) Validate() []string {
 }
 
 func NewUPingConf() Conf {
-	return Conf{Size: 24, Ttl: 64, Interval: 1, Count: -1, CountSuccess: -1}
+	return Conf{Size: 24, TTL: 64, Interval: 1, Count: -1, CountSuccess: -1}
 }

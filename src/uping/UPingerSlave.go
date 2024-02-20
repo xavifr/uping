@@ -1,4 +1,4 @@
-package UPing
+package uping
 
 import (
 	"fmt"
@@ -40,7 +40,6 @@ func (u *uPingerSlave) execSSH() {
 	sshPath := which.Which("ssh")
 	if len(sshPath) == 0 {
 		fmt.Println("SSH path not found")
-		time.Sleep(3)
 		return
 	}
 
@@ -54,7 +53,7 @@ func (u *uPingerSlave) execSSH() {
 		cmdArgs = append(cmdArgs, "-l", u.target.User)
 	}
 
-	cmdArgs = append(cmdArgs, fmt.Sprintf("%s", u.target.Host))
+	cmdArgs = append(cmdArgs, u.target.Host)
 
 	cmd := exec.Command(sshPath, cmdArgs...)
 	cmd.Stdout = os.Stdout
@@ -65,7 +64,7 @@ func (u *uPingerSlave) execSSH() {
 	startCmd := time.Now()
 	cmd.Run()
 
-	timeElapsed := time.Now().Sub(startCmd)
+	timeElapsed := time.Since(startCmd)
 	u.Status.Seq[0] += int(timeElapsed.Seconds())
 	u.paused = false
 }
@@ -90,8 +89,8 @@ func newUPingerSlave(conf Conf, target *Target) (*uPingerSlave, error) {
 		slave.pinger.Source = conf.Source
 	}
 
-	if conf.Ttl != 0 {
-		slave.pinger.TTL = conf.Ttl
+	if conf.TTL != 0 {
+		slave.pinger.TTL = conf.TTL
 	}
 
 	slave.pinger.OnRecv = func(pkt *probing.Packet) {
