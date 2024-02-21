@@ -85,7 +85,7 @@ func newUPingerSlave(conf Conf, target *Target) (*uPingerSlave, error) {
 	}
 
 	slave.pinger.SetPrivileged(privileged)
-	
+
 	// conf to pinger
 	if conf.Size != 0 {
 		slave.pinger.Size = conf.Size
