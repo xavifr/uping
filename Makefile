@@ -16,4 +16,4 @@ binaries:
 	@GOOS=windows GOARCH=386 go build -C src -o ../bin/uping-x86.exe main.go
 	@GOOS=windows GOARCH=amd64 go build -C src -o ../bin/uping-x64.exe main.go
 
-all: 
+all:

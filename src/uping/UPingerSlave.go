@@ -79,8 +79,13 @@ func newUPingerSlave(conf Conf, target *Target) (*uPingerSlave, error) {
 	slave.Rtt = make(chan time.Duration, 1)
 	slave.pinger = probing.New(target.Address)
 
-	slave.pinger.SetPrivileged(true)
+	privileged, err := checkPrivileged()
+	if err != nil {
+		return nil, err
+	}
 
+	slave.pinger.SetPrivileged(privileged)
+	
 	// conf to pinger
 	if conf.Size != 0 {
 		slave.pinger.Size = conf.Size
