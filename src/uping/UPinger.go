@@ -114,7 +114,7 @@ func (p *UPinger) Start() error {
 			fmt.Printf("%c", rune(007))
 		}
 
-		fmt.Printf("%c[1G[%s] %c[1muPing%c[22m ✯ Int:%ds, TTL:%d, Sz:%db\n", rune(033), time.Now().Format(time.DateTime), rune(033), rune(033), p.conf.Interval, p.conf.TTL, p.conf.Size)
+		fmt.Printf("%c[1G[%s] %c[1muPing%c[22m Int:%ds, TTL:%d, Sz:%db\n", rune(033), time.Now().Format(time.DateTime), rune(033), rune(033), p.conf.Interval, p.conf.TTL, p.conf.Size)
 
 		for _, s := range p.slaves {
 			fmt.Printf("  %c[1m%s%c[22m%s %s\n", rune(033), s.target.Host, rune(033), strings.Repeat(" ", maxTargetHostLen-len(s.target.Host)), s.Status.ToString())

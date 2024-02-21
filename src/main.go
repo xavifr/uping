@@ -52,7 +52,14 @@ func getIPFromInterface(intName string) string {
 		return ""
 	}
 
-	return addrs[0].String()
+	switch ip := addrs[0].(type) {
+	case *net.IPNet:
+		return ip.IP.String()
+	case *net.IPAddr:
+		return ip.IP.String()
+	}
+
+	return ""
 }
 
 func main() {

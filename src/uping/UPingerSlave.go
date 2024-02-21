@@ -22,7 +22,10 @@ type uPingerSlave struct {
 func (u *uPingerSlave) Run() {
 	u.running = true
 	go func() {
-		u.pinger.Run()
+		err := u.pinger.Run()
+		if err != nil {
+			fmt.Println(err)
+		}
 		u.running = false
 	}()
 }
@@ -60,6 +63,7 @@ func (u *uPingerSlave) execSSH() {
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 
+	fmt.Printf("Connecting to %s\n", u.target.Host)
 	u.paused = true
 	startCmd := time.Now()
 	cmd.Run()
@@ -74,6 +78,8 @@ func newUPingerSlave(conf Conf, target *Target) (*uPingerSlave, error) {
 
 	slave.Rtt = make(chan time.Duration, 1)
 	slave.pinger = probing.New(target.Address)
+
+	slave.pinger.SetPrivileged(true)
 
 	// conf to pinger
 	if conf.Size != 0 {
