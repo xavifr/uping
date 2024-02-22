@@ -164,6 +164,9 @@ func main() {
 		}
 	}()
 
-	pinger.Start()
+	err = pinger.Start()
+	if err != nil {
+		fmt.Println(err)
+	}
 
 }

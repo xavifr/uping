@@ -74,7 +74,7 @@ func (u *uPingerSlave) execSSH() {
 }
 
 func newUPingerSlave(conf Conf, target *Target) (*uPingerSlave, error) {
-	slave := &uPingerSlave{conf: conf, target: target, Status: &UPingerSlaveStatus{}}
+	slave := &uPingerSlave{conf: conf, target: target, Status: newUPingerSlaveStatus()}
 
 	slave.Rtt = make(chan time.Duration, 1)
 	slave.pinger = probing.New(target.Address)

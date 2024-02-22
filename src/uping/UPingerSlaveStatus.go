@@ -13,11 +13,14 @@ const (
 )
 
 type UPingerSlaveStatus struct {
-	State   UPingStatus
-	LastRtt time.Duration
-	Seq     []int
+	State UPingStatus
+	Seq   []int
 
-	AvgRtt    time.Duration
+	LastRtt time.Duration
+	MinRtt  time.Duration
+	AvgRtt  time.Duration
+	MaxRtt  time.Duration
+
 	TotalOK   int
 	TotalSent int
 }
@@ -30,7 +33,12 @@ func (s *UPingerSlaveStatus) AppendUp(rtt time.Duration) (changed bool) {
 	}
 
 	s.Seq[0]++
+
 	s.LastRtt = rtt
+	s.MinRtt = min(s.MinRtt, rtt)
+	s.MaxRtt = max(s.MaxRtt, rtt)
+	s.AvgRtt = (s.AvgRtt*time.Duration(s.TotalOK) + rtt) / time.Duration(s.TotalOK+1)
+
 	s.TotalOK++
 	s.TotalSent++
 
@@ -100,4 +108,8 @@ func (s *UPingerSlaveStatus) gc() {
 	if len(s.Seq) > 5 {
 		s.Seq = s.Seq[0:5]
 	}
+}
+
+func newUPingerSlaveStatus() *UPingerSlaveStatus {
+	return &UPingerSlaveStatus{State: Down, LastRtt: time.Hour, MinRtt: time.Hour}
 }

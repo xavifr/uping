@@ -66,6 +66,8 @@ func (p *UPinger) Start() error {
 		timer := time.NewTimer(time.Until(seedTime))
 		<-timer.C
 
+		sentPackets++
+
 		childrenAreRunning := false
 		childrenChanged := false
 
@@ -114,7 +116,7 @@ func (p *UPinger) Start() error {
 			fmt.Printf("%c", rune(007))
 		}
 
-		fmt.Printf("%c[1G[%s] %c[1muPing%c[22m Int:%ds, TTL:%d, Sz:%db\n", rune(033), time.Now().Format(time.DateTime), rune(033), rune(033), p.conf.Interval, p.conf.TTL, p.conf.Size)
+		fmt.Printf("%c[1G[%s] %c[1muPing%c[22m int:%ds, sent:%d\n", rune(033), time.Now().Format(time.DateTime), rune(033), rune(033), p.conf.Interval, sentPackets)
 
 		for _, s := range p.slaves {
 			fmt.Printf("  %c[1m%s%c[22m%s %s\n", rune(033), s.target.Host, rune(033), strings.Repeat(" ", maxTargetHostLen-len(s.target.Host)), s.Status.ToString())
@@ -132,7 +134,6 @@ func (p *UPinger) Start() error {
 		} else {
 			countAllUp = 0
 		}
-		sentPackets++
 
 		if p.conf.Count > 0 && sentPackets >= p.conf.Count || (p.conf.CountSuccess > 0 && countAllUp >= p.conf.CountSuccess) || !childrenAreRunning {
 			break
