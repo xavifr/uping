@@ -105,7 +105,7 @@ func newUPingerSlave(conf Conf, target *Target) (*uPingerSlave, error) {
 	}
 
 	slave.pinger.OnRecv = func(pkt *probing.Packet) {
-		if !slave.paused {
+		if !slave.paused && pkt.Rtt < time.Second*time.Duration(slave.conf.Interval) {
 			slave.Rtt <- pkt.Rtt
 		}
 	}

@@ -13,6 +13,7 @@ type UPinger struct {
 	targets []*Target
 	slaves  []*uPingerSlave
 	report  chan bool
+	timer   *time.Timer
 }
 
 func (p *UPinger) AddTarget(target string) error {
@@ -63,8 +64,8 @@ func (p *UPinger) Start() error {
 	for p.running {
 		seedTime = seedTime.Add(time.Second * time.Duration(p.conf.Interval))
 
-		timer := time.NewTimer(time.Until(seedTime))
-		<-timer.C
+		p.timer = time.NewTimer(time.Until(seedTime))
+		<-p.timer.C
 
 		sentPackets++
 
@@ -97,6 +98,10 @@ func (p *UPinger) Start() error {
 				allUp = false
 				childrenChanged = slave.Status.AppendDown() || childrenChanged
 			}
+		}
+
+		if !p.running && !childrenAreRunning {
+			break
 		}
 
 		if p.conf.Watch {
@@ -153,6 +158,8 @@ func (p *UPinger) Stop() {
 	for _, s := range p.slaves {
 		s.Stop()
 	}
+
+	p.timer.Reset(0)
 }
 
 func NewUPinger(conf Conf) (*UPinger, error) {
