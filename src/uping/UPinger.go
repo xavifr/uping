@@ -140,7 +140,11 @@ func (p *UPinger) Start() error {
 			countAllUp = 0
 		}
 
-		if p.conf.Count > 0 && sentPackets >= p.conf.Count || (p.conf.CountSuccess > 0 && countAllUp >= p.conf.CountSuccess) || !childrenAreRunning {
+		if p.conf.Count > 0 && sentPackets >= p.conf.Count || (p.conf.CountSuccess > 0 && countAllUp >= p.conf.CountSuccess) {
+			break
+		}
+
+		if !childrenAreRunning {
 			break
 		}
 	}

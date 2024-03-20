@@ -22,17 +22,23 @@ type uPingerSlave struct {
 func (u *uPingerSlave) Run() {
 	u.running = true
 	go func() {
-		err := u.pinger.Run()
-		if err != nil {
-			fmt.Println(err)
+		for u.running {
+			if u.preparePinger() {
+				u.pinger.Run()
+			}
+
+			time.Sleep(time.Second * time.Duration(u.conf.Interval))
 		}
+
 		u.running = false
 	}()
 }
 
 func (u *uPingerSlave) Stop() {
 	u.running = false
-	u.pinger.Stop()
+	if u.pinger != nil {
+		u.pinger.Stop()
+	}
 }
 
 func (u *uPingerSlave) IsRunning() bool {
@@ -73,47 +79,56 @@ func (u *uPingerSlave) execSSH() {
 	u.paused = false
 }
 
+func (u *uPingerSlave) preparePinger() bool {
+	if u.pinger != nil {
+		u.pinger.Stop()
+	}
+
+	pinger := probing.New(u.target.Address)
+
+	privileged, err := checkPrivileged()
+	if err != nil {
+		u.pinger = nil
+		return false
+	}
+
+	pinger.SetPrivileged(privileged)
+	pinger.SetLogger(nil)
+
+	pinger.RecordRtts = false
+
+	// conf to pinger
+	if u.conf.Size != 0 {
+		pinger.Size = u.conf.Size
+	}
+
+	pinger.Interval = time.Second * time.Duration(u.conf.Interval)
+	/*if conf.Count != -1 {
+		slave.pinger.Count = conf.Count
+	}*/
+
+	if u.conf.Source != "" {
+		pinger.Source = u.conf.Source
+	}
+
+	if u.conf.TTL != 0 {
+		pinger.TTL = u.conf.TTL
+	}
+
+	pinger.OnRecv = func(pkt *probing.Packet) {
+		if !u.paused && pkt.Rtt < time.Second*time.Duration(u.conf.Interval) {
+			u.Rtt <- pkt.Rtt
+		}
+	}
+
+	u.pinger = pinger
+	return true
+}
+
 func newUPingerSlave(conf Conf, target *Target) (*uPingerSlave, error) {
 	slave := &uPingerSlave{conf: conf, target: target, Status: newUPingerSlaveStatus()}
 
 	slave.Rtt = make(chan time.Duration, 1)
-	slave.pinger = probing.New(target.Address)
-
-	privileged, err := checkPrivileged()
-	if err != nil {
-		return nil, err
-	}
-
-	slave.pinger.SetPrivileged(privileged)
-
-	// conf to pinger
-	if conf.Size != 0 {
-		slave.pinger.Size = conf.Size
-	}
-
-	slave.pinger.Interval = time.Second * time.Duration(slave.conf.Interval)
-	if conf.Count != -1 {
-		slave.pinger.Count = conf.Count
-	}
-
-	if conf.Source != "" {
-		slave.pinger.Source = conf.Source
-	}
-
-	if conf.TTL != 0 {
-		slave.pinger.TTL = conf.TTL
-	}
-
-	slave.pinger.OnRecv = func(pkt *probing.Packet) {
-		if !slave.paused && pkt.Rtt < time.Second*time.Duration(slave.conf.Interval) {
-			slave.Rtt <- pkt.Rtt
-		}
-	}
-
-	slave.pinger.OnFinish = func(statistics *probing.Statistics) {
-		slave.running = false
-		slave.pinger.Stop()
-	}
 
 	return slave, nil
 }
