@@ -1,0 +1,10 @@
+Source: uping
+Section: network
+Maintainer: xavier franquet <xavier@saima.info>
+
+Package: uping
+Architecture: amd64
+Section: network
+Priority: optional
+Description: UPing!
+Conflicts: uping-sw

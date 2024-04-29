@@ -1,0 +1,7 @@
+#!/bin/sh
+
+chmod +x /usr/bin/uping
+
+setcap cap_net_raw=+ep /usr/bin/uping
+
+exit 0
