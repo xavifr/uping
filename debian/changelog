@@ -1,3 +1,9 @@
+uping (3.0-1) any; urgency=medium
+
+  * Fix vulnerability on go/x/net
+
+ -- Xavier Franquet <xavier@franquet.es>  Fri, 22 Nov 2024 08:22:26 -0400
+
 uping (3.0) any; urgency=medium
 
   * First go version
