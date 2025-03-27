@@ -1,6 +1,12 @@
 build:
 	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -C src -ldflags "-w -s" -o ../bin/uping main.go
 
+
+install: build
+	cp bin/uping /usr/local/bin/uping
+	chmod +x /usr/local/bin/uping
+	setcap cap_net_raw=+ep /usr/local/bin/uping
+
 run:
 	go run -C src main.go $(PARAM)
 
