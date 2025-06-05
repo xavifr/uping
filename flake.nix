@@ -17,7 +17,7 @@
             pname = "uping";
             version = "3.0";
             src = ./src;
-            vendorHash = "sha256-knHNT6KeePRmqx4A2XxHMgCr09CgZVI6FsPjfh7hMIA=";
+            vendorHash = "sha256-IBZvU3qpoHYOq9+yVCkGgjxRv2vBvPRFXBfZJQ9PSec=";
             subPackages = [ "." ];
             doCheck = false;
             # The binary will be named 'uping' by default since main.go is in src
