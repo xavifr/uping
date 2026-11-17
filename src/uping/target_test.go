@@ -2,6 +2,7 @@ package uping
 
 import (
 	"testing"
+	"time"
 )
 
 func TestParseTarget(t *testing.T) {
@@ -91,12 +92,39 @@ func TestAddTargetWhileRunningFails(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p.running = true
+	if err := p.AddTarget("127.0.0.1"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Start blocks, so drive the running state for real instead of poking the
+	// (mutex-guarded) field directly.
+	errc := make(chan error, 1)
+	go func() { errc <- p.Start() }()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for !p.IsRunning() {
+		if time.Now().After(deadline) {
+			p.Stop()
+			t.Fatal("pinger did not start")
+		}
+		time.Sleep(time.Millisecond)
+	}
 
 	if err := p.AddTarget("localhost"); err == nil {
 		t.Fatal("expected an error when adding a target to a running pinger")
 	} else if err.Error() != "cannot add target while running" {
 		t.Errorf("error = %q, want the running guard", err)
+	}
+
+	p.Stop()
+
+	select {
+	case err := <-errc:
+		if err != nil {
+			t.Fatalf("Start: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Start() did not return after Stop()")
 	}
 }
 

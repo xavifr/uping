@@ -10,17 +10,22 @@ import (
 
 type UPinger struct {
 	conf    Conf
-	running bool
 	targets []*Target
-	slaves  []*uPingerSlave
 	report  chan bool
-	timer   *time.Timer
-	done    chan struct{}
-	once    sync.Once
+
+	// mu guards running and slaves, which Start() writes and Stop() reads from
+	// the signal-handling goroutine.
+	mu      sync.Mutex
+	running bool
+	slaves  []*uPingerSlave
+
+	// done is closed exactly once by Stop() to interrupt Start().
+	done chan struct{}
+	once sync.Once
 }
 
 func (p *UPinger) AddTarget(target string) error {
-	if p.running {
+	if p.IsRunning() {
 		return errors.New("cannot add target while running")
 	}
 
@@ -34,18 +39,27 @@ func (p *UPinger) AddTarget(target string) error {
 	return nil
 }
 
+// IsRunning reports whether Start() has begun and Stop() has not been called.
+func (p *UPinger) IsRunning() bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.running
+}
+
 func (p *UPinger) Start() error {
 	maxTargetHostLen := 0
 
-	p.done = make(chan struct{})
+	// done is created once in NewUPinger and never replaced: recreating it here
+	// would let a concurrent Stop() close a discarded channel, so Ctrl-C would
+	// be ignored.
 
-	p.slaves = make([]*uPingerSlave, 0)
+	slaves := make([]*uPingerSlave, 0)
 	for _, target := range p.targets {
 		slave, err := newUPingerSlave(p.conf, target)
 		if err != nil {
 			return err
 		}
-		p.slaves = append(p.slaves, slave)
+		slaves = append(slaves, slave)
 
 		if len(target.Host) > maxTargetHostLen {
 			maxTargetHostLen = len(target.Host)
@@ -53,8 +67,12 @@ func (p *UPinger) Start() error {
 
 	}
 
+	p.mu.Lock()
+	p.slaves = slaves
 	p.running = true
-	for _, s := range p.slaves {
+	p.mu.Unlock()
+
+	for _, s := range slaves {
 		s.Run()
 	}
 
@@ -73,13 +91,23 @@ func (p *UPinger) Start() error {
 	sentPackets := 0
 	countAllUp := 0
 	seedTime := time.Now()
-	for p.running {
+loop:
+	for p.IsRunning() {
 		seedTime = seedTime.Add(time.Second * time.Duration(p.conf.Interval))
 
-		p.timer = time.NewTimer(time.Until(seedTime))
+		// The timer is local so that Stop(), which runs on another goroutine,
+		// does not need to reach into it. Closing done is enough to interrupt.
+		timer := time.NewTimer(time.Until(seedTime))
 		select {
-		case <-p.timer.C:
+		case <-timer.C:
 		case <-p.done:
+			timer.Stop()
+			// Stopped while waiting: leave without drawing one more frame.
+			break loop
+		}
+
+		if !p.IsRunning() {
+			break
 		}
 
 		sentPackets++
@@ -92,7 +120,7 @@ func (p *UPinger) Start() error {
 		allUp := true
 		allDown := true
 
-		for _, slave := range p.slaves {
+		for _, slave := range slaves {
 			if slave.IsRunning() {
 				childrenAreRunning = true
 			}
@@ -115,7 +143,7 @@ func (p *UPinger) Start() error {
 			}
 		}
 
-		if !p.running && !childrenAreRunning {
+		if !p.IsRunning() && !childrenAreRunning {
 			break
 		}
 
@@ -124,7 +152,7 @@ func (p *UPinger) Start() error {
 			fmt.Printf("%c[1J%c[1;1H", rune(033), rune(033))
 		} else if !childrenChanged {
 			// rewind and clean printed lines
-			for range p.slaves {
+			for range slaves {
 				fmt.Printf("%c[1A", rune(033))
 				fmt.Printf("%c[2K", rune(033))
 			}
@@ -138,7 +166,7 @@ func (p *UPinger) Start() error {
 
 		fmt.Printf("%c[1G[%s] %c[1muPing%c[22m int:%ds, sent:%d\n", rune(033), time.Now().Format(time.DateTime), rune(033), rune(033), p.conf.Interval, sentPackets)
 
-		for _, s := range p.slaves {
+		for _, s := range slaves {
 			line := s.Status.ToString()
 
 			// A probe that never reached the wire is a configuration error, not
@@ -149,7 +177,7 @@ func (p *UPinger) Start() error {
 
 			fmt.Printf("  %c[1m%s%c[22m%s %s\n", rune(033), s.target.Host, rune(033), strings.Repeat(" ", maxTargetHostLen-len(s.target.Host)), line)
 
-			if len(p.slaves) == 1 && s.Status.State && len(s.Status.Seq) > 0 && s.Status.Seq[0] == 1 {
+			if len(slaves) == 1 && s.Status.State && len(s.Status.Seq) > 0 && s.Status.Seq[0] == 1 {
 				if p.conf.ExecSSH {
 					s.execSSH()
 					seedTime = time.Now()
@@ -184,20 +212,20 @@ func (p *UPinger) checkPrivileges() error {
 	return err
 }
 
+// Stop asks Start() to return. It is safe to call before Start() and safe to
+// call more than once, including concurrently from a signal handler.
 func (p *UPinger) Stop() {
 	p.once.Do(func() {
-		if p.done != nil {
-			close(p.done)
-		}
+		close(p.done)
 	})
 
+	p.mu.Lock()
 	p.running = false
-	for _, s := range p.slaves {
-		s.Stop()
-	}
+	slaves := p.slaves
+	p.mu.Unlock()
 
-	if p.timer != nil {
-		p.timer.Stop()
+	for _, s := range slaves {
+		s.Stop()
 	}
 }
 

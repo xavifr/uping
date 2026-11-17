@@ -45,7 +45,7 @@ func TestStopIsIdempotent(t *testing.T) {
 		t.Fatal("Start() did not return after Stop()")
 	}
 
-	if p.running {
+	if p.IsRunning() {
 		t.Error("running is true after Stop()")
 	}
 }
@@ -80,6 +80,41 @@ func TestStartReturnsAfterStop(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("Start() did not return after Stop()")
+	}
+}
+
+// Regression: Start() replaced the done channel it had been given by
+// NewUPinger, so a Stop() racing startup closed the discarded channel and was
+// never observed. Start() must return even when Stop() wins the race.
+func TestStopRacingStartReturns(t *testing.T) {
+	for i := 0; i < 20; i++ {
+		p, err := NewUPinger(NewUPingConf())
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := p.AddTarget("127.0.0.1"); err != nil {
+			t.Fatal(err)
+		}
+
+		errc := make(chan error, 1)
+		go func() { errc <- p.Start() }()
+
+		// No sleep: this is the Ctrl-C-immediately-after-launch case.
+		p.Stop()
+
+		select {
+		case err := <-errc:
+			if err != nil {
+				t.Fatalf("Start: %v", err)
+			}
+		case <-time.After(5 * time.Second):
+			t.Fatalf("iteration %d: Stop() during startup did not interrupt Start()", i)
+		}
+
+		if p.IsRunning() {
+			t.Fatalf("iteration %d: still running after Stop()", i)
+		}
 	}
 }
 
