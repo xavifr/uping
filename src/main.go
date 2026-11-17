@@ -37,6 +37,35 @@ Usage:
 
 `
 
+// pickIPv4 returns the first IPv4 address in addrs, skipping IPv6 entries
+// regardless of their position. It returns nil when there is none.
+func pickIPv4(addrs []net.Addr) net.IP {
+	for _, addr := range addrs {
+		var ip net.IP
+
+		switch a := addr.(type) {
+		case *net.IPNet:
+			ip = a.IP
+		case *net.IPAddr:
+			ip = a.IP
+		default:
+			continue
+		}
+
+		// To4 returns nil for anything that is not an IPv4 address, and also
+		// normalises IPv4-mapped IPv6 entries to their IPv4 form.
+		if v4 := ip.To4(); v4 != nil {
+			return v4
+		}
+	}
+
+	return nil
+}
+
+// getIPFromInterface returns the first IPv4 address assigned to the named
+// interface, or "" when the interface has none. IPv6 addresses are skipped so
+// that a dual-stack interface does not yield an unusable source for an IPv4
+// target.
 func getIPFromInterface(intName string) string {
 	inter, err := net.InterfaceByName(intName)
 	if err != nil {
@@ -44,18 +73,16 @@ func getIPFromInterface(intName string) string {
 	}
 
 	addrs, err := inter.Addrs()
-	if err != nil || len(addrs) == 0 {
+	if err != nil {
 		return ""
 	}
 
-	switch ip := addrs[0].(type) {
-	case *net.IPNet:
-		return ip.IP.String()
-	case *net.IPAddr:
-		return ip.IP.String()
+	ip := pickIPv4(addrs)
+	if ip == nil {
+		return ""
 	}
 
-	return ""
+	return ip.String()
 }
 
 func main() {
