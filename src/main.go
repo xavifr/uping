@@ -37,10 +37,6 @@ Usage:
 
 `
 
-func isIP(ipString string) bool {
-	return net.ParseIP(ipString) != nil
-}
-
 func getIPFromInterface(intName string) string {
 	inter, err := net.InterfaceByName(intName)
 	if err != nil {
@@ -117,7 +113,7 @@ func main() {
 	conf.Watch = *watch
 
 	if len(*source) > 0 {
-		if isIP(*source) {
+		if net.ParseIP(*source) != nil {
 			conf.Source = *source
 		} else if ip := getIPFromInterface(*source); ip != "" {
 			conf.Source = ip
@@ -128,9 +124,7 @@ func main() {
 		}
 	}
 
-	if interval != nil {
-		conf.Interval = *interval
-	}
+	conf.Interval = *interval
 
 	if conf.ExecSSH && flag.NArg() > 1 {
 		flag.Usage()
@@ -147,10 +141,9 @@ func main() {
 	}
 
 	for _, arg := range flag.Args() {
-		err := pinger.AddTarget(arg)
-		if err != nil {
+		if err := pinger.AddTarget(arg); err != nil {
 			flag.Usage()
-			fmt.Printf("Error: Invalid target %s\n", arg)
+			fmt.Printf("Error: Invalid target %s: %v\n", arg, err)
 			os.Exit(2)
 		}
 	}

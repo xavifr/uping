@@ -86,6 +86,38 @@ func TestValidate(t *testing.T) {
 			name:   "interval bounds are inclusive",
 			adjust: func(c *Conf) { c.Interval = 300 },
 		},
+		{
+			name:    "size negative",
+			adjust:  func(c *Conf) { c.Size = -1 },
+			wantErr: "Invalid packet size (must be >= 0)",
+		},
+		{
+			name:   "size zero means default",
+			adjust: func(c *Conf) { c.Size = 0 },
+		},
+		{
+			name:    "ttl negative",
+			adjust:  func(c *Conf) { c.TTL = -1 },
+			wantErr: "Invalid TTL (must be >= 0)",
+		},
+		{
+			name:   "ttl zero means os default",
+			adjust: func(c *Conf) { c.TTL = 0 },
+		},
+		{
+			name:    "count below unlimited",
+			adjust:  func(c *Conf) { c.Count = -2 },
+			wantErr: "Invalid count (must be >= -1)",
+		},
+		{
+			name:    "count success below unlimited",
+			adjust:  func(c *Conf) { c.CountSuccess = -2 },
+			wantErr: "Invalid count (must be >= -1)",
+		},
+		{
+			name:   "count negative one is unlimited",
+			adjust: func(c *Conf) { c.Count = -1; c.CountSuccess = -1 },
+		},
 	}
 
 	for _, tt := range tests {

@@ -42,7 +42,9 @@ func ParseTarget(target string) (*Target, error) {
 	hostTarget.Address = addrs[0]
 
 	if len(matches[1]) > 0 {
-		userRegexp, _ := regexp.Compile(`^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\$)$`)
+		// POSIX usernames are case-sensitive and may start with an uppercase
+		// letter, so the pattern must not be lowercase-only.
+		userRegexp, _ := regexp.Compile(`^[a-zA-Z_]([a-zA-Z0-9_-]{0,31}|[a-zA-Z0-9_-]{0,30}\$)$`)
 		if !userRegexp.MatchString(matches[1]) {
 			return nil, errors.New("target username not valid")
 		}

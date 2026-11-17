@@ -121,5 +121,7 @@ func (s *UPingerSlaveStatus) gc() {
 }
 
 func newUPingerSlaveStatus() *UPingerSlaveStatus {
+	// LastRtt and MinRtt are seeded so the first minimum comparison works;
+	// nothing renders them until a sample has arrived.
 	return &UPingerSlaveStatus{State: Down, LastRtt: time.Hour, MinRtt: time.Hour}
 }

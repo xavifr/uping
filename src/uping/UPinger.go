@@ -77,7 +77,8 @@ func (p *UPinger) Start() error {
 	}
 
 	// Fail loudly when pinging is impossible instead of looping forever with
-	// every target reported as down.
+	// every target reported as down. Do this before touching the screen so a
+	// failed start does not leave the terminal blanked.
 	if err := p.checkPrivileges(); err != nil {
 		p.Stop()
 		return err

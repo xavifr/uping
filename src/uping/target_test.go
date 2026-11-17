@@ -29,7 +29,8 @@ func TestParseTarget(t *testing.T) {
 		{name: "port zero", input: "localhost:0", wantErr: true},
 		{name: "port too large", input: "localhost:65536", wantErr: true},
 		{name: "missing host with port", input: ":22", wantErr: true},
-		{name: "upleercase user", input: "Root@localhost", wantErr: true},
+		{name: "uppercase user", input: "Root@localhost", host: "localhost", user: "Root"},
+		{name: "uppercase user and port", input: "Admin@localhost:22", host: "localhost", user: "Admin", port: 22},
 		{name: "user starting with a digit", input: "1root@localhost", wantErr: true},
 		{name: "unresolvable host", input: "this-host-does-not-exist.invalid", wantErr: true},
 	}
@@ -71,7 +72,7 @@ func TestParseTarget(t *testing.T) {
 // TestParseTargetLimitations documents the known parsing gaps so a future fix
 // has a test to flip. These are limitations, not desired behaviour.
 func TestParseTargetLimitations(t *testing.T) {
-	t.Skip("documented limitations; remove this skip when IPv6 and uppercase users are supported")
+	t.Skip("documented limitation; remove this skip when IPv6 literals are supported")
 
 	t.Run("IPv6 literal", func(t *testing.T) {
 		if _, err := ParseTarget("::1"); err != nil {
