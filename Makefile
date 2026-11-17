@@ -13,8 +13,8 @@ run:
 check:
 	@echo "Checking for code smell"
 	@go run -C src honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-ST1000,-U1000 ./...
-	#@echo "Checking for vulnerabilities"
-	#@go run -C src golang.org/x/vuln/cmd/govulncheck@latest ./...
+	@echo "Checking for vulnerabilities"
+	@go run -C src golang.org/x/vuln/cmd/govulncheck@latest ./...
 
 # src/vendor is gitignored, so Nix derives the vendor tree itself and pins it
 # with vendorHash in flake.nix. Any go.mod/go.sum change invalidates that hash;

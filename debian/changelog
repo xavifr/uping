@@ -1,3 +1,13 @@
+uping (3.1.0-1) any; urgency=medium
+
+  * Skip IPv6 in getIPFromInterface, resolve -I to IPv4 only
+  * Fix Stop() racing Start()
+  * Fix medium and low severity issues
+  * Update Go dependencies: pro-bing 0.9.1, x/net 0.62.0, libcap 1.2.78
+  * Build against Go 1.26 to clear standard library advisories
+
+ -- Xavier Franquet <xavier@franquet.es>  Tue, 17 Nov 2026 15:49:40 +0100
+
 uping (3.0-1) any; urgency=medium
 
   * Fix vulnerability on go/x/net

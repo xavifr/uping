@@ -9,7 +9,7 @@ import (
 	"uping/uping"
 )
 
-var versionString = "3.0"
+var versionString = "3.1.0"
 var usage = `
 Usage:
 

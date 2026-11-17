@@ -55,7 +55,7 @@
         {
           uping = (buildGo pkgs) {
             pname = "uping";
-            version = "3.0";
+            version = "3.1.0";
             src = ./src;
 
             # Hash of the vendor tree derived from go.mod/go.sum. This cannot be
