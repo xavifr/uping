@@ -55,5 +55,5 @@ func (c *Conf) Validate() []string {
 }
 
 func NewUPingConf() Conf {
-	return Conf{Size: 24, TTL: 64, Interval: 1, Count: -1, CountSuccess: -1}
+	return Conf{Size: 24, Interval: 1, Count: -1, CountSuccess: -1}
 }

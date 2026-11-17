@@ -76,7 +76,7 @@ func main() {
 	interval := flag.Int("i", 1, "")
 	source := flag.String("I", "", "")
 
-	ttl := flag.Int("t", 64, "TTL")
+	ttl := flag.Int("t", 0, "TTL")
 
 	zudibleSingle := flag.Bool("z", false, "")
 	zudibleAll := flag.Bool("Z", false, "")
@@ -96,7 +96,7 @@ func main() {
 
 	if flag.NArg() == 0 || flag.NArg() > 16 {
 		flag.Usage()
-		return
+		os.Exit(2)
 	}
 
 	conf := uping.NewUPingConf()
@@ -119,12 +119,12 @@ func main() {
 	if len(*source) > 0 {
 		if isIP(*source) {
 			conf.Source = *source
-		} else if getIPFromInterface(*source) != "" {
-			conf.Source = getIPFromInterface(*source)
+		} else if ip := getIPFromInterface(*source); ip != "" {
+			conf.Source = ip
 		} else {
 			flag.Usage()
 			fmt.Println("Error: Invalid source address")
-			return
+			os.Exit(2)
 		}
 	}
 
@@ -135,7 +135,7 @@ func main() {
 	if conf.ExecSSH && flag.NArg() > 1 {
 		flag.Usage()
 		fmt.Println("Error: Execution flag is only compatible with 1-target mode")
-		return
+		os.Exit(2)
 	}
 
 	pinger, err := uping.NewUPinger(conf)
@@ -143,7 +143,7 @@ func main() {
 		flag.Usage()
 		fmt.Println("Errors:")
 		fmt.Println(err)
-		return
+		os.Exit(2)
 	}
 
 	for _, arg := range flag.Args() {
@@ -151,7 +151,7 @@ func main() {
 		if err != nil {
 			flag.Usage()
 			fmt.Printf("Error: Invalid target %s\n", arg)
-			return
+			os.Exit(2)
 		}
 	}
 
@@ -167,6 +167,7 @@ func main() {
 	err = pinger.Start()
 	if err != nil {
 		fmt.Printf("ERR: %s\n", err)
+		os.Exit(1)
 	}
 
 }

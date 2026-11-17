@@ -62,6 +62,16 @@ func (s *UPingerSlaveStatus) AppendDown() (changed bool) {
 	return
 }
 
+// Skip records time that was not sampled (for example while an SSH session was
+// attached). The previous state is kept so the display does not show a loss.
+func (s *UPingerSlaveStatus) Skip(seconds int) {
+	if seconds <= 0 || len(s.Seq) == 0 {
+		return
+	}
+
+	s.Seq[0] += seconds
+}
+
 func (s *UPingerSlaveStatus) GetPercent() float64 {
 	if s.TotalSent == 0 || s.TotalOK == 0 {
 		return 0

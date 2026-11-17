@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -14,6 +15,8 @@ type UPinger struct {
 	slaves  []*uPingerSlave
 	report  chan bool
 	timer   *time.Timer
+	done    chan struct{}
+	once    sync.Once
 }
 
 func (p *UPinger) AddTarget(target string) error {
@@ -34,6 +37,8 @@ func (p *UPinger) AddTarget(target string) error {
 func (p *UPinger) Start() error {
 	maxTargetHostLen := 0
 
+	p.done = make(chan struct{})
+
 	p.slaves = make([]*uPingerSlave, 0)
 	for _, target := range p.targets {
 		slave, err := newUPingerSlave(p.conf, target)
@@ -53,6 +58,13 @@ func (p *UPinger) Start() error {
 		s.Run()
 	}
 
+	// Fail loudly when pinging is impossible instead of looping forever with
+	// every target reported as down.
+	if err := p.checkPrivileges(); err != nil {
+		p.Stop()
+		return err
+	}
+
 	if p.conf.Watch {
 		// clear screen and move cursor up
 		fmt.Printf("%c[2J", rune(033))
@@ -65,7 +77,10 @@ func (p *UPinger) Start() error {
 		seedTime = seedTime.Add(time.Second * time.Duration(p.conf.Interval))
 
 		p.timer = time.NewTimer(time.Until(seedTime))
-		<-p.timer.C
+		select {
+		case <-p.timer.C:
+		case <-p.done:
+		}
 
 		sentPackets++
 
@@ -84,7 +99,7 @@ func (p *UPinger) Start() error {
 
 			select {
 			case rtt, ok := <-slave.Rtt:
-				if ok {
+				if ok && rtt >= 0 {
 					allDown = false
 					oneUp = true
 					childrenChanged = slave.Status.AppendUp(rtt) || childrenChanged
@@ -124,9 +139,17 @@ func (p *UPinger) Start() error {
 		fmt.Printf("%c[1G[%s] %c[1muPing%c[22m int:%ds, sent:%d\n", rune(033), time.Now().Format(time.DateTime), rune(033), rune(033), p.conf.Interval, sentPackets)
 
 		for _, s := range p.slaves {
-			fmt.Printf("  %c[1m%s%c[22m%s %s\n", rune(033), s.target.Host, rune(033), strings.Repeat(" ", maxTargetHostLen-len(s.target.Host)), s.Status.ToString())
+			line := s.Status.ToString()
 
-			if len(p.slaves) == 1 && s.Status.State && s.Status.Seq[0] == 1 {
+			// A probe that never reached the wire is a configuration error, not
+			// packet loss, so say so instead of printing a bare DOWN.
+			if err := s.LastError(); err != nil {
+				line = fmt.Sprintf("%c[1;31mERR%c[22;39m %s", rune(033), rune(033), err)
+			}
+
+			fmt.Printf("  %c[1m%s%c[22m%s %s\n", rune(033), s.target.Host, rune(033), strings.Repeat(" ", maxTargetHostLen-len(s.target.Host)), line)
+
+			if len(p.slaves) == 1 && s.Status.State && len(s.Status.Seq) > 0 && s.Status.Seq[0] == 1 {
 				if p.conf.ExecSSH {
 					s.execSSH()
 					seedTime = time.Now()
@@ -149,21 +172,33 @@ func (p *UPinger) Start() error {
 		}
 	}
 
-	// rewind last line
-	//	fmt.Printf("%c[2K%c[1G", rune(033), rune(033))
-
 	p.Stop()
 
 	return nil
 }
 
+// checkPrivileges surfaces a configuration problem that would otherwise look
+// like every target being down.
+func (p *UPinger) checkPrivileges() error {
+	_, err := checkPrivileged()
+	return err
+}
+
 func (p *UPinger) Stop() {
+	p.once.Do(func() {
+		if p.done != nil {
+			close(p.done)
+		}
+	})
+
 	p.running = false
 	for _, s := range p.slaves {
 		s.Stop()
 	}
 
-	p.timer.Reset(0)
+	if p.timer != nil {
+		p.timer.Stop()
+	}
 }
 
 func NewUPinger(conf Conf) (*UPinger, error) {
@@ -173,5 +208,5 @@ func NewUPinger(conf Conf) (*UPinger, error) {
 
 	}
 
-	return &UPinger{conf: conf}, nil
+	return &UPinger{conf: conf, done: make(chan struct{})}, nil
 }
